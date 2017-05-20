@@ -1,0 +1,33 @@
+#!/bin/bash
+#shellcheck disable=1090
+
+. "$(git --exec-path)"/git-sh-setup
+
+FORBIDDEN_WORDS=(
+    'System.out'
+    'System.err'
+)
+
+if git rev-parse --verify HEAD >/dev/null 2>&1
+then
+    against=HEAD
+else
+    # Initial commit: diff against an empty tree object
+    against=""
+fi
+
+# Redirect output to stderr.
+exec 1>&2
+
+# If there are whitespace errors, print the offending file names and fail.
+git diff-index --check --cached "$against" -- || die Whitespace
+git -c core.whitespace=tab-in-indent diff --check --cached "$against" -- || die Whitespace
+
+for forbidden in "${FORBIDDEN_WORDS[@]}"; do
+    if [[ "X$(git diff --cached --name-only)" != "X" ]]; then
+        git diff --cached --name-only | \
+            xargs grep --with-filename -n "$forbidden" \
+            && die "COMMIT REJECTED Found \"$forbidden\" references. Please remove them before commiting"
+        echo
+    fi
+done

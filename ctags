@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+
+PATH="/usr/local/bin:$PATH"
+dir="$(git rev-parse --git-dir)"
+
+if [ ! -f "$dir/ctags.lock" ]; then
+    touch "$dir/ctags.lock"
+    git ls-files | \
+        /usr/local/bin/ctags --tag-relative -L - -f"$dir/$$.tags" --languages=-javascript,sql
+    mv "$dir/$$.tags" "$dir/tags"
+    rm -f "$dir/ctags.lock"
+fi
